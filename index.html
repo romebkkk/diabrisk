@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DiabRisk — Calculadora Clínica de Riesgo de Diabetes Tipo 2 (FINDRISC / OMS)</title>
+  <meta name="description" content="Calcula tu riesgo a 10 años de desarrollar Diabetes Tipo 2 con la escala FINDRISC de la OMS. Simulador de reversión de prediabetes y registro glucémico ADA 2024. 100% privado en tu navegador.">
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --card-hover: #334155;
+      --border: #334155;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --primary: #06b6d4;
+      --primary-hover: #0891b2;
+      --accent: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --radius: 16px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+    body { background: var(--bg); color: var(--text); padding: 20px 16px 80px; min-height: 100vh; display: flex; flex-direction: column; align-items: center; }
+    .container { max-width: 680px; width: 100%; }
+    
+    header { text-align: center; margin-bottom: 24px; }
+    .badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; background: rgba(6, 182, 212, 0.15); color: var(--primary); border: 1px solid rgba(6, 182, 212, 0.3); border-radius: 999px; font-size: 0.8rem; font-weight: 600; margin-bottom: 12px; }
+    h1 { font-size: 1.85rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 8px; }
+    .subtitle { color: var(--muted); font-size: 0.95rem; line-height: 1.5; }
+    
+    .nav-tabs { display: flex; gap: 8px; background: rgba(30, 41, 59, 0.6); padding: 6px; border-radius: 12px; margin-bottom: 20px; border: 1px solid var(--border); }
+    .nav-btn { flex: 1; padding: 10px 8px; border: none; background: transparent; color: var(--muted); font-weight: 600; font-size: 0.85rem; border-radius: 8px; cursor: pointer; transition: all 0.2s; text-align: center; }
+    .nav-btn.active { background: var(--primary); color: #000; font-weight: 700; box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3); }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3); }
+    .card-title { font-size: 1.15rem; font-weight: 700; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+    
+    .form-group { margin-bottom: 16px; }
+    .form-group:last-child { margin-bottom: 0; }
+    label { display: block; font-size: 0.85rem; font-weight: 600; color: #cbd5e1; margin-bottom: 6px; }
+    .help-text { font-size: 0.75rem; color: var(--muted); margin-top: 4px; }
+    
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    input[type="number"], select, input[type="text"] { width: 100%; padding: 11px 14px; background: #0f172a; border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-size: 0.95rem; outline: none; transition: border 0.2s; }
+    input[type="number"]:focus, select:focus { border-color: var(--primary); }
+
+    .options-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; }
+    .opt-label { display: flex; align-items: center; gap: 8px; background: #0f172a; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; }
+    .opt-label:hover { border-color: var(--card-hover); }
+    .opt-label input[type="radio"], .opt-label input[type="checkbox"] { accent-color: var(--primary); }
+
+    .btn { width: 100%; padding: 14px; border: none; border-radius: 12px; font-size: 1rem; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .btn-primary { background: linear-gradient(135deg, var(--primary), #0284c7); color: #000; box-shadow: 0 4px 14px rgba(6, 182, 212, 0.4); }
+    .btn-primary:hover { opacity: 0.95; transform: translateY(-1px); }
+    .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); margin-top: 10px; }
+    .btn-outline:hover { background: var(--card-hover); }
+
+    .result-box { padding: 20px; border-radius: 14px; text-align: center; margin-top: 16px; border: 1px solid var(--border); }
+    .score-circle { width: 88px; height: 88px; border-radius: 50%; margin: 0 auto 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 800; font-size: 1.7rem; border: 4px solid var(--primary); }
+    .score-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: var(--muted); }
+    .risk-badge { display: inline-block; padding: 6px 16px; border-radius: 999px; font-weight: 700; font-size: 0.95rem; margin-bottom: 10px; }
+    .risk-desc { font-size: 0.9rem; line-height: 1.5; color: #e2e8f0; }
+
+    .sim-card { background: rgba(16, 185, 129, 0.08); border-color: rgba(16, 185, 129, 0.2); }
+    .slider-container { margin: 16px 0; }
+    .slider-val { font-weight: 700; color: var(--accent); }
+    input[type="range"] { width: 100%; accent-color: var(--accent); }
+
+    .diary-table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 0.85rem; }
+    .diary-table th, .diary-table td { padding: 10px 8px; border-bottom: 1px solid var(--border); text-align: left; }
+    .diary-table th { color: var(--muted); font-weight: 600; }
+
+    .disclaimer { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 12px; padding: 12px 14px; font-size: 0.8rem; color: #fca5a5; line-height: 1.45; margin-top: 24px; text-align: center; }
+    footer { text-align: center; margin-top: 24px; font-size: 0.8rem; color: var(--muted); }
+    footer a { color: var(--primary); text-decoration: none; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <div class="badge">🧬 Salud Preventiva & Cronicidad · OMS / ADA 2024</div>
+    <h1>DiabRisk</h1>
+    <p class="subtitle">Calculadora clínica de riesgo de Diabetes a 10 años (Escala FINDRISC) y simulador de reversión de prediabetes.</p>
+  </header>
+
+  <nav class="nav-tabs">
+    <button class="nav-btn active" onclick="cambiarTab('findrisc')">📊 Test FINDRISC</button>
+    <button class="nav-btn" onclick="cambiarTab('simulador')">⚡ Simulador Hábitos</button>
+    <button class="nav-btn" onclick="cambiarTab('diario')">🩸 Glucemia ADA</button>
+  </nav>
+
+  <!-- TAB 1: FINDRISC -->
+  <div id="tab-findrisc" class="tab-content active">
+    <div class="card">
+      <div class="card-title">👤 Perfil y Medidas Corporales</div>
+      
+      <div class="grid-2 form-group">
+        <div>
+          <label for="f-edad">Edad (años)</label>
+          <input type="number" id="f-edad" value="48" min="18" max="110">
+        </div>
+        <div>
+          <label for="f-sexo">Sexo biológico</label>
+          <select id="f-sexo" onchange="actualizarConsejoCintura()">
+            <option value="hombre">Hombre</option>
+            <option value="mujer">Mujer</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="grid-2 form-group">
+        <div>
+          <label for="f-peso">Peso (kg)</label>
+          <input type="number" id="f-peso" value="82" min="30" max="250" oninput="calcularIMCEscenario()">
+        </div>
+        <div>
+          <label for="f-altura">Altura (cm)</label>
+          <input type="number" id="f-altura" value="175" min="120" max="230" oninput="calcularIMCEscenario()">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="f-cintura">Perímetro de cintura (cm a la altura del ombligo)</label>
+        <input type="number" id="f-cintura" value="98" min="50" max="180">
+        <div class="help-text" id="cintura-help">Peligro si: > 94 cm en hombres o > 80 cm en mujeres.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🏃 Estilo de Vida y Factores Médicos</div>
+
+      <div class="form-group">
+        <label>¿Haces al menos 30 minutos diarios de actividad física moderada?</label>
+        <div class="options-grid">
+          <label class="opt-label"><input type="radio" name="f-actividad" value="si"> Sí (caminar, correr...)</label>
+          <label class="opt-label"><input type="radio" name="f-actividad" value="no" checked> No</label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>¿Con qué frecuencia comes verduras, hortalizas o frutas?</label>
+        <div class="options-grid">
+          <label class="opt-label"><input type="radio" name="f-verdura" value="si"> Todos los días</label>
+          <label class="opt-label"><input type="radio" name="f-verdura" value="no" checked> No todos los días</label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>¿Tomas habitualmente medicación para la hipertensión arterial?</label>
+        <div class="options-grid">
+          <label class="opt-label"><input type="radio" name="f-hta" value="si"> Sí</label>
+          <label class="opt-label"><input type="radio" name="f-hta" value="no" checked> No</label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>¿Te han encontrado alguna vez glucosa alta en sangre (ej. revisión o embarazo)?</label>
+        <div class="options-grid">
+          <label class="opt-label"><input type="radio" name="f-glucosa-previa" value="si"> Sí</label>
+          <label class="opt-label"><input type="radio" name="f-glucosa-previa" value="no" checked> No</label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>¿Algún familiar directo tuyo ha sido diagnosticado de diabetes (tipo 1 o 2)?</label>
+        <select id="f-familia">
+          <option value="ninguno">No tengo familiares con diabetes</option>
+          <option value="segundo_grado">Abuelos, tíos o primos (2º grado)</option>
+          <option value="primer_grado">Padres, hermanos o hijos (1er grado)</option>
+        </select>
+      </div>
+
+      <button class="btn btn-primary" onclick="ejecutarCalculoFINDRISC()">📊 Calcular mi Riesgo a 10 Años</button>
+    </div>
+
+    <div id="resultado-findrisc" style="display: none;"></div>
+  </div>
+
+  <!-- TAB 2: SIMULADOR DE REVERSIÓN -->
+  <div id="tab-simulador" class="tab-content">
+    <div class="card sim-card">
+      <div class="card-title">⚡ Simulador de Prevención (Estudio Clínico DPP / DPS)</div>
+      <p style="font-size: 0.9rem; color: #cbd5e1; line-height: 1.5; margin-bottom: 16px;">
+        La prediabetes es <strong>reversible</strong>. En los mayores ensayos clínicos mundiales (Diabetes Prevention Program), perder un <strong>5-7 % de peso</strong> y hacer 150 minutos a la semana de ejercicio redujo la aparición de diabetes un <strong>58 %</strong>.
+      </p>
+
+      <div class="slider-container">
+        <label>Objetivo de pérdida de peso saludable: <span class="slider-val" id="val-slider-peso">5 kg</span></label>
+        <input type="range" id="sim-slider-peso" min="0" max="20" value="5" step="1" oninput="actualizarSimulacion()">
+      </div>
+
+      <div class="form-group">
+        <label class="opt-label">
+          <input type="checkbox" id="sim-actividad" checked onchange="actualizarSimulacion()">
+          Adoptar 30 min de caminata/ejercicio diario (+150 min/semana)
+        </label>
+      </div>
+
+      <div class="form-group">
+        <label class="opt-label">
+          <input type="checkbox" id="sim-verdura" checked onchange="actualizarSimulacion()">
+          Comer fruta y verduras frescas a diario
+        </label>
+      </div>
+
+      <div id="resultado-simulador" class="result-box" style="background: rgba(16, 185, 129, 0.12); border-color: rgba(16, 185, 129, 0.4);">
+        <!-- Inyectado vía JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 3: DIARIO Y EVALUADOR ADA -->
+  <div id="tab-diario" class="tab-content">
+    <div class="card">
+      <div class="card-title">🩸 Intérprete Glucémico Clínico (ADA 2024)</div>
+      
+      <div class="grid-2 form-group">
+        <div>
+          <label for="glu-tipo">Momento de la toma</label>
+          <select id="glu-tipo">
+            <option value="basal">Ayunas matutina (Basal)</option>
+            <option value="postprandial">2 horas tras comer (Postprandial)</option>
+            <option value="hba1c">Hemoglobina Glicosilada (HbA1c %)</option>
+          </select>
+        </div>
+        <div>
+          <label for="glu-valor">Valor medido (<span id="glu-unidad">mg/dL</span>)</label>
+          <input type="number" id="glu-valor" placeholder="Ej: 105" step="0.1">
+        </div>
+      </div>
+
+      <button class="btn btn-primary" onclick="interpretarYGuardarGlucemia()">Interpretar y Guardar Registro</button>
+
+      <div id="glu-eval-resultado" style="margin-top: 14px; display: none;"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📋 Mi Historial Glucémico Local</div>
+      <div style="overflow-x: auto;">
+        <table class="diary-table">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Tipo</th>
+              <th>Valor</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody id="diary-tbody">
+            <tr><td colspan="4" style="text-align: center; color: var(--muted);">Sin registros aún. Introduce un valor arriba.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <button class="btn btn-outline" onclick="borrarHistorialGlucemia()">🗑️ Limpiar historial</button>
+    </div>
+  </div>
+
+  <div class="disclaimer">
+    ⚠️ <strong>Aviso Médico Oficial:</strong> DiabRisk es una herramienta orientativa basada en las escalas oficiales FINDRISC y los criterios ADA 2024. No realiza diagnósticos médicos formales ni prescribe tratamientos. Cualquier duda debe ser confirmada mediante analítica sanguínea en tu centro de atención primaria.
+  </div>
+
+  <footer>
+    <p>Desarrollado con ❤️ por <a href="https://github.com/romebkkk" target="_blank">DataFlow Elegance</a> · Ismael Ben Kazem · Código Abierto (MIT)</p>
+  </footer>
+</div>
+
+<script src="diabrisk.js"></script>
+<script>
+  function cambiarTab(tab) {
+    document.querySelectorAll('.tab-content').forEach(function(el) { el.classList.remove('active'); });
+    document.querySelectorAll('.nav-btn').forEach(function(el) { el.classList.remove('active'); });
+    document.getElementById('tab-' + tab).classList.add('active');
+    event.target.classList.add('active');
+    if (tab === 'simulador') actualizarSimulacion();
+    if (tab === 'diario') renderizarHistorial();
+  }
+
+  function actualizarConsejoCintura() {
+    var sexo = document.getElementById('f-sexo').value;
+    var help = document.getElementById('cintura-help');
+    help.textContent = sexo === 'hombre' ? 'Peligro si: > 94 cm (moderado) o > 102 cm (alto).' : 'Peligro si: > 80 cm (moderado) o > 88 cm (alto).';
+  }
+
+  function calcularIMCEscenario() {
+    var p = parseFloat(document.getElementById('f-peso').value);
+    var a = parseFloat(document.getElementById('f-altura').value);
+    if (p && a) {
+      var imc = DiabRisk.calcularIMC(p, a);
+    }
+  }
+
+  function obtenerDatosFormulario() {
+    return {
+      edad: parseInt(document.getElementById('f-edad').value, 10),
+      sexo: document.getElementById('f-sexo').value,
+      peso: parseFloat(document.getElementById('f-peso').value),
+      altura: parseFloat(document.getElementById('f-altura').value),
+      cintura: parseFloat(document.getElementById('f-cintura').value),
+      actividadFisicaDiaria: document.querySelector('input[name="f-actividad"]:checked').value === 'si',
+      comeVerduraFrutaDiario: document.querySelector('input[name="f-verdura"]:checked').value === 'si',
+      tomaMedicacionHipertension: document.querySelector('input[name="f-hta"]:checked').value === 'si',
+      glucosaElevadaPrevia: document.querySelector('input[name="f-glucosa-previa"]:checked').value === 'si',
+      antecedentesFamiliares: document.getElementById('f-familia').value
+    };
+  }
+
+  function ejecutarCalculoFINDRISC() {
+    var datos = obtenerDatosFormulario();
+    var res = DiabRisk.calcularFINDRISC(datos);
+    var cont = document.getElementById('resultado-findrisc');
+
+    cont.style.display = 'block';
+    cont.innerHTML = `
+      <div class="result-box card" style="border-top: 5px solid ${res.color};">
+        <div class="score-circle" style="border-color: ${res.color}; color: ${res.color};">
+          ${res.puntosTotales}
+          <div class="score-label">PUNTOS</div>
+        </div>
+        <div class="risk-badge" style="background: ${res.color}22; color: ${res.color}; border: 1px solid ${res.color}66;">
+          Riesgo ${res.nivelRiesgo}
+        </div>
+        <h3 style="margin-bottom: 8px; font-size: 1.1rem;">Probabilidad a 10 años: ${res.probabilidad10Anios}</h3>
+        <p class="risk-desc">${res.accionRecomendada}</p>
+        <button class="btn btn-outline" style="margin-top: 14px;" onclick="cambiarTabDirecto('simulador')">⚡ Ver cómo reducir mi riesgo en el Simulador</button>
+      </div>
+    `;
+    cont.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function cambiarTabDirecto(tab) {
+    document.querySelectorAll('.tab-content').forEach(function(el) { el.classList.remove('active'); });
+    document.querySelectorAll('.nav-btn').forEach(function(el) { el.classList.remove('active'); });
+    document.getElementById('tab-' + tab).classList.add('active');
+    document.querySelectorAll('.nav-btn')[tab === 'simulador' ? 1 : 2].classList.add('active');
+    actualizarSimulacion();
+  }
+
+  function actualizarSimulacion() {
+    var kgPerdida = parseFloat(document.getElementById('sim-slider-peso').value);
+    document.getElementById('val-slider-peso').textContent = kgPerdida + ' kg';
+    var datos = obtenerDatosFormulario();
+    var act = document.getElementById('sim-actividad').checked;
+    var verd = document.getElementById('sim-verdura').checked;
+
+    var sim = DiabRisk.simularIntervencionEstiloVida(datos, {
+      reduccionPesoKg: kgPerdida,
+      actividadFisicaDiaria: act,
+      comeVerduraFrutaDiario: verd
+    });
+
+    var box = document.getElementById('resultado-simulador');
+    box.innerHTML = `
+      <div style="font-size: 1.5rem; font-weight: 800; color: #10b981; margin-bottom: 6px;">
+        -${sim.puntosReducidos} Puntos Menos de Riesgo
+      </div>
+      <p style="font-size: 0.95rem; margin-bottom: 8px;">
+        Tu puntuación pasaría de <strong>${sim.actual.puntosTotales}</strong> a <strong style="color: ${sim.simulado.color};">${sim.simulado.puntosTotales} puntos</strong> (Riesgo: ${sim.simulado.nivelRiesgo}).
+      </p>
+      <div style="font-size: 0.8rem; color: #94a3b8; line-height: 1.4;">
+        🎯 ${sim.reduccionRiesgoRelativo}
+      </div>
+    `;
+  }
+
+  document.getElementById('glu-tipo').addEventListener('change', function() {
+    document.getElementById('glu-unidad').textContent = this.value === 'hba1c' ? '%' : 'mg/dL';
+  });
+
+  function interpretarYGuardarGlucemia() {
+    var tipo = document.getElementById('glu-tipo').value;
+    var val = parseFloat(document.getElementById('glu-valor').value);
+    if (!val || val <= 0) return alert('Introduce un valor glucémico válido.');
+
+    var res = DiabRisk.interpretarGlucosa(tipo, val);
+    var resDiv = document.getElementById('glu-eval-resultado');
+    resDiv.style.display = 'block';
+    resDiv.innerHTML = `
+      <div style="padding: 12px; border-radius: 10px; background: ${res.color}22; border: 1px solid ${res.color}66; color: ${res.color}; font-weight: 600; font-size: 0.9rem;">
+        ${res.categoria}<br>
+        <span style="font-weight: 400; font-size: 0.85rem; color: #f8fafc;">${res.mensaje}</span>
+      </div>
+    `;
+
+    var registro = {
+      fecha: new Date().toLocaleDateString('es-ES') + ' ' + new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
+      tipo: tipo === 'basal' ? 'Ayunas' : (tipo === 'postprandial' ? '2h Post' : 'HbA1c'),
+      valor: val + (tipo === 'hba1c' ? ' %' : ' mg/dL'),
+      estado: res.categoria.split('(')[0].trim(),
+      color: res.color
+    };
+
+    var hist = JSON.parse(localStorage.getItem('diabrisk_historial') || '[]');
+    hist.unshift(registro);
+    localStorage.setItem('diabrisk_historial', JSON.stringify(hist));
+    renderizarHistorial();
+  }
+
+  function renderizarHistorial() {
+    var hist = JSON.parse(localStorage.getItem('diabrisk_historial') || '[]');
+    var tbody = document.getElementById('diary-tbody');
+    if (!hist.length) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--muted);">Sin registros aún. Introduce un valor arriba.</td></tr>';
+      return;
+    }
+    var html = '';
+    hist.slice(0, 10).forEach(function(item) {
+      html += `<tr>
+        <td>${item.fecha}</td>
+        <td>${item.tipo}</td>
+        <td><strong>${item.valor}</strong></td>
+        <td><span style="color: ${item.color}; font-weight: 600;">${item.estado}</span></td>
+      </tr>`;
+    });
+    tbody.innerHTML = html;
+  }
+
+  function borrarHistorialGlucemia() {
+    if (confirm('¿Deseas vaciar los registros locales de glucemia?')) {
+      localStorage.removeItem('diabrisk_historial');
+      renderizarHistorial();
+    }
+  }
+
+  window.onload = function() {
+    renderizarHistorial();
+    actualizarConsejoCintura();
+  };
+</script>
+</body>
+</html>
